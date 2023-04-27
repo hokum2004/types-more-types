@@ -7,8 +7,14 @@ type Timestamp = Timestamp.Type
 
 type TimestampAlias = Long
 
-val t1: TimestampAlias = 1000 // <- OK
+def ExpectAlias(ts: TimestampAlias): String = "OK"
 
-val t2: Timestamp = Timestamp(1000) // <- OK
+def ExpectNewType(ts: Timestamp): String = "OK"
 
-val t3: Timestamp = 1000 // <- Ошибка при копиляции
+val t1: TimestampAlias = 1000
+val t2: Timestamp = Timestamp(1000)
+
+ExpectAlias(t1) // <- OK
+ExpectAlias(1000) // <- OK
+ExpectNewType(t2) // <- OK
+ExpectNewType(1000) // <- Ошибка компиляции

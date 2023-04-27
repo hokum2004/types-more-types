@@ -3,7 +3,8 @@
 ## Введение
 
 В процессе работы над кодом, при описании модели данных, приходится создавать новые типы, в первую очередь используя такие ключевые слова как `class`/`struct`/`record`. Это позволяет создавать новые типы данных, которые агрегируют в себе другие типы как простые, так и составные. Все это знают и применяют. Я же предлагаю взглянуть на случаи, когда моделируемая сущность, описывается существующим типом, таким как целое число или строка.
-В статье я хочу поделиться мыслями, которые привели меня к использованию специальных типов там, где часто используются встроенные типы. На написание статьи побудил релиз и относительно массовый переход на третью версию языка Scala. В частности, я говорю о новой конструкции [`opaque type`][1], которая упростила создание новых типов. Но так же приведу примеры и других на языках с которыми довелось поработать, а именно Scala, C++, Go. 
+
+В статье я хочу поделиться мыслями, которые привели меня к использованию специальных типов там, где часто используются встроенные типы. На написание статьи побудил релиз и относительно массовый переход на третью версию языка Scala. В частности, я говорю о новой конструкции [`opaque type`][1], которая упростила создание новых типов. Но так же приведу примеры и других на языках с которыми довелось поработать, а именно Scala, C++, Go.
 
 ## Почти type alias, но лучше
 
@@ -32,7 +33,7 @@ case class Sale(
 
 ```go
 // определили типы
-type Timestamp = uint64
+type Timestamp = int64
 type UserId = string
 type SKU = string
 
@@ -50,7 +51,7 @@ type Sale struct {
 
 ```cpp
 // определили типы
-using Timestamp = uint64_t;
+using Timestamp = int64_t;
 using UserId = string;
 using SKU = string;
 
@@ -115,26 +116,98 @@ type Timestamp = Timestamp.Type
 
 type TimestampAlias = Long
 
-val t1: TimestampAlias = 1000 // <- OK
+def ExpectAlias(ts: TimestampAlias): String = "OK"
 
-val t2: Timestamp = Timestamp(1000) // <- OK
+def ExpectNewType(ts: Timestamp): String = "OK"
 
-val t3: Timestamp = 1000 // <- Ошибка при копиляции
+val t1: TimestampAlias = 1000
+val t2: Timestamp = Timestamp(1000)
+
+ExpectAlias(t1) // <- OK
+ExpectAlias(1000) // <- OK
+ExpectNewType(t2) // <- OK
+ExpectNewType(1000) // <- Ошибка компиляции
 ```
 
 Использование вспомогательного трейта так же позволит добавить реализации необходимых given instances (реализации имплиситов в терминах новой скалы), которые будут выведены на базе given instances базовых типов.
 
 </spoiler>
 
-<spoiler title="C++">
-
+<spoiler title="Go">
 
 
 </spoiler>
 
 <spoiler title="C++">
 
+В C++ подобных языковых конструкций нет. Но можно создать шаблонную структуру с одним полем и в качестве аргумента шаблона использовать специальную структуру тег. Тег будет представлять собой пустую структуру с типом внутри, который будет использоваться в качестве базового типа.
 
+```cpp
+template <typename Tag>
+struct NewType {
+    explicit NewType(typename Tag::Type value): value(value) {}
+    typename Tag::Type value;
+};
+```
+
+И использование будет выглядеть так:
+
+```cpp
+struct TimestampTag {
+    using Type = int64_t;
+};
+using Timestamp = NewType<TimestampTag>;
+
+struct UserIdTag {
+    using Type = std::string;
+};
+using UserId = NewType<UserIdTag>;
+
+struct SKUTag {
+    using Type = std::string;
+};
+using SKU = NewType<SKUTag>;
+
+struct Sale {
+    UserId customer;
+    SKU item;
+    Timestamp date;
+};
+```
+
+```cpp
+#include <string>
+
+template <typename Tag>
+struct NewType {
+    explicit NewType(typename Tag::Type value): value(value) {}
+    typename Tag::Type value;
+};
+
+struct TimestampTag {
+    using Type = int64_t;
+};
+using Timestamp = NewType<TimestampTag>;
+
+using TimestampAlias = int64_t;
+
+void ExpectAlias(TimestampAlias) {}
+
+void ExpectNewType(Timestamp) {}
+
+int main() {
+
+    TimestampAlias ts1 = 1000;
+    Timestamp ts2 = Timestamp(1000);
+
+    ExpectAlias(ts1); // <- OK
+    ExpectAlias(1000); // <- OK
+    ExpectNewType(ts2); // <- OK
+    ExpectNewType(1000); // <- Ошибка компиляции
+
+    return 0;
+}
+```
 
 </spoiler>
 
