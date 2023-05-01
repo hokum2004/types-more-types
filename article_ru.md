@@ -135,6 +135,49 @@ ExpectNewType(1000) // <- Ошибка компиляции
 
 <spoiler title="Go">
 
+С Go проще всего. Новый тип создается при помощи [type definition][2].
+
+```go
+// определили типы
+type Timestamp int64
+type UserId string
+type SKU string
+
+// используем
+type Sale struct {
+    Customer UserId
+    Item     SKU
+    Date     Timestamp
+}
+```
+
+Отличие от варианта с псевдонимами в том, что при определении типа между именем нового типа и базовым типом нет знака равно. В целом, в Go создание новых типов можно встретить довольно часто, так как это позволяет "добавить" нужные методы к уже существующему типу, чтобы он начал соответствовать требуемому интерфейсу или просто обеспечить более удобную работу с ним.
+
+```go
+package main
+
+type Timestamp int64
+
+type TimestampAlias = int64
+
+func ExpectAlias(v TimestampAlias) {}
+
+func ExpectNewType(v Timestamp) {}
+
+func main() {
+	v := int64(1000)
+	t1 := TimestampAlias(v)
+	t2 := Timestamp(v)
+	
+	ExpectAlias(t1)   // <- OK
+	ExpectAlias(v)    // <- OK
+	
+	ExpectNewType(t2) // <- OK
+	ExpectNewType(v)  // <- Ошибка
+}
+```
+
+Можно заметить, что во втором случае в `ExpectNewType` передается не просто число, а переменная с типом `int64`. Дело в том, что целочисленный литерал неявно приводится к любому типу который может быть сконструирован из него. Это целые числа, числа с плавающей точкой и типы для которых перечисленные являются базовыми (underlying). Поэтому вызов `ExpectNewType(1000)` не приведет к ошибке.
 
 </spoiler>
 
@@ -180,8 +223,10 @@ struct Sale {
 
 template <typename Tag>
 struct NewType {
-    explicit NewType(typename Tag::Type value): value(value) {}
-    typename Tag::Type value;
+    using Raw = typename Tag::Type;
+    explicit NewType(Raw const& value): value(value) {}
+    explicit NewType(Raw && value): value(value) {}
+    Raw value;
 };
 
 struct TimestampTag {
@@ -211,5 +256,5 @@ int main() {
 
 </spoiler>
 
-
-[1]: <https://docs.scala-lang.org/scala3/book/types-opaque-types.html> 'Opaque Types'
+[1]: <https://docs.scala-lang.org/scala3/book/types-opaque-types.html> 'Scala: Opaque Types'
+[2]: <https://go.dev/ref/spec#TypeDef> 'Go: Type Definitions'
