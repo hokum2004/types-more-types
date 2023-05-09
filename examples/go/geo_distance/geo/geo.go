@@ -16,7 +16,11 @@ type point struct {
 	Lon longitude
 }
 
-type Point *point
+type Point = *point
+
+func (p *point) String() string {
+	return fmt.Sprintf("%v, %v", p.Lat, p.Lon)
+}
 
 const R = 6371e3 //Earth radius
 
@@ -28,14 +32,14 @@ func (m Metres) ToKilometres() Kilometres {
 
 func NewLat(v float64) (latitude, error) {
 	if v < -85 || v > 85 {
-		return 0, fmt.Errorf("latitude must be a value between -85 and 85, but got %v", v)
+		return 0, fmt.Errorf("latitude must be between -85 and 85, but got %v", v)
 	}
 	return latitude(v), nil
 }
 
 func NewLon(v float64) (longitude, error) {
 	if v < -180 || v > 180 {
-		return 0, fmt.Errorf("longitude must be a value between -180 and 180, but got %v", v)
+		return 0, fmt.Errorf("longitude must be between -180 and 180, but got %v", v)
 	}
 	return longitude(v), nil
 }

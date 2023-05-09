@@ -1,9 +1,10 @@
 package main
 
 import (
-	"example/geo"
+	"errors"
 	"fmt"
-	"log"
+
+	"example/geo"
 )
 
 func readPoint() (geo.Point, error) {
@@ -16,14 +17,20 @@ func readPoint() (geo.Point, error) {
 		return nil, err
 	}
 
+	errs := make([]error, 0, 2)
+
 	lat, err := geo.NewLat(rawLat)
 	if err != nil {
-		return nil, nil
+		errs = append(errs, err)
 	}
 
 	lon, err := geo.NewLon(rawLon)
 	if err != nil {
-		return nil, nil
+		errs = append(errs, err)
+	}
+
+	if len(errs) != 0 {
+		return nil, errors.Join(errs...)
 	}
 
 	return geo.NewPoint(lat, lon), nil
@@ -33,14 +40,14 @@ func main() {
 	fmt.Print("Input start point (lat, lon): ")
 	p1, err := readPoint()
 	if err != nil {
-		log.Fatalf("[E] reading the start point failed: %v", err)
+		fmt.Printf("[E] reading the start point failed: %v\n", err)
 		return
 	}
 
 	fmt.Print("Input end point (lat, lon): ")
 	p2, err := readPoint()
 	if err != nil {
-		log.Fatalf("[E] reading the end point failed: %v", err)
+		fmt.Printf("[E] reading the end point failed: %v\n", err)
 		return
 	}
 

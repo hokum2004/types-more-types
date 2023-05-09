@@ -166,15 +166,15 @@ func ExpectAlias(v TimestampAlias) {}
 func ExpectNewType(v Timestamp) {}
 
 func main() {
-	v := int64(1000)
-	t1 := TimestampAlias(v)
-	t2 := Timestamp(v)
-	
-	ExpectAlias(t1)   // <- OK
-	ExpectAlias(v)    // <- OK
-	
-	ExpectNewType(t2) // <- OK
-	ExpectNewType(v)  // <- Ошибка
+    v := int64(1000)
+    t1 := TimestampAlias(v)
+    t2 := Timestamp(v)
+    
+    ExpectAlias(t1)   // <- OK
+    ExpectAlias(v)    // <- OK
+    
+    ExpectNewType(t2) // <- OK
+    ExpectNewType(v)  // <- Ошибка
 }
 ```
 
@@ -265,13 +265,133 @@ int main() {
 
 ## Можно ли лучше?
 
-Всё выше перечисленное уже полезно само по себе. Но можно ли получить от типов еще больше пользы. Да, можно. Когда работаем с моделью данных, может потребоваться ввести ограничние на возможные значения. Например, если описывать трегуольник, то ограничением будет, что сумма длинн двух прилегающих сторон будет больше третьей оставшейся. В случае с одним значением подобные ограничения тоже могут быть. Например, географическая широта может быть ограничена значениями от -85° до 85°, а долгота от -180° до 180. Или от пользоватля (или внещней системы) ожидается строка только в определенном формате. Когда данные приходят в систему, то они проходят проверку и упомянутые ограничения, обычно, делаются на этапе валидации входных данных. Но дальше, смотря на описание структуры данных или сигнатуру функции эти ограничения теряются. И может возникнуть вопрос, а что делать если в какую-то функцию, которая работает с данными уже прошедшими валидацию, пришли невалидные данные. С одной строны - такая ситуация должна быть исключена, с другой при невалидных данных что-нибудь может сломаться или пойти не так.
+Всё выше перечисленное уже полезно само по себе. Но можно ли получить от типов еще больше пользы. Да, можно. Когда работаем с моделью данных, может потребоваться ввести ограничение на возможные значения. Например, если описывать треугольник, то ограничением будет, что сумма длин двух прилегающих сторон будет больше третьей оставшейся. В случае с одним значением подобные ограничения тоже могут быть. Например, географическая широта может быть ограничена значениями от -85° до 85°, а долгота от -180° до 180. Или от пользователя (или внешней системы) ожидается строка только в определенном формате.
 
-Какие подходы есть к решению такой проблемы. Самое простое - ничего не делать, сичтаем, что данные которыми оперируют функции внутри сервиса валидны и ничего не сломается. Второй путь, вставить проверки, которые в случае ошибки кинут исключение, в языках такие проверки могут называться `assert` или `require`. Можно (нужно) к таким проверка добавить запись в лог, чтобы понимать что конкретно и где пошло не так и с какими данными. В случае C++ можно встретить, что такие проверки присутвсвуют в отладочной версии, но исключаются в релизной. Так приложение тестируется с ними и если что-то пошло не так на тестовом стенде, то приложение упадет, а после тестирования считаем, что всё хорошо и такие проверки не нужны и они убираются. Ещё, можно заморочиться и во всех функция добавить проверки и определить поведение в случае, если на вход пришли не валидные данные. Сложный и кропотливый враиант, который сложно поддерживать и в итоге, всё может свестить к предыдущему. А ещё, можно задать эти ограничения в самих типах. Как и в случае с треугольником, где проверка длин сторон может выполнятся в конструкторе типа треугольник или функции, которая его создает. C типами поверх существующих можно сдеkать такие же проверки. И тогда, там где эти типы используются можно не опасаться за валидность данных - данные не могут быть невалидными.
+Когда данные приходят в систему, то они проходят проверку и упомянутые ограничения, обычно, делаются на этапе валидации входных данных. Но дальше, смотря на описание структуры данных или сигнатуру функции эти ограничения теряются. И может возникнуть вопрос, а что делать если в какую-то функцию, которая работает с данными уже прошедшими валидацию, пришли невалидные данные. С одной стороны - такая ситуация должна быть исключена, с другой при невалидных данных что-нибудь может сломаться или пойти не так и заметить это может быть не просто.
+
+Какие подходы есть к решению такой проблемы? Самое простое - ничего не делать, считаем, что данные которыми оперируют функции внутри сервиса валидны и ничего не сломается. Можно, вставить проверки, которые в случае ошибки кинут исключение, в языках такие проверки могут называться `assert` или `require`. Можно (нужно) к таким проверка добавить запись в лог, чтобы понимать что конкретно и где пошло не так и с какими данными. В случае C++ можно встретить, что такие проверки присутствуют в отладочной версии, но исключаются в релизной. Таким образом приложение тестируется с включенными проверками и если что-то пошло не так на тестовом стенде, то приложение упадет, а после тестирования считаем, что подобные проверки не нужны и они убираются. Самый трудоемкий путь - во всех функция добавить проверки и определить поведение в случае, если на вход пришли не валидные данные. Это кропотливый вариант, который сложно поддерживать и в итоге, всё может свестись к однообразным и не информативным ошибкам. А ещё, можно задать эти ограничения в самих типах. Как и в случае с треугольником, где проверка длин сторон может производиться в конструкторе типа или функции-фабрике. С типами поверх существующих можно сделать такие же проверки. И тогда, там где эти типы используются можно не опасаться за валидность данных.
 
 Как этого добиться - зависит от языка и в предыдущем разделе была заложена основа для добавления проверок, приступим.
 
 <spoiler title="Scala">
+
+Из упомянутых здесь языков решение для Scala мне нравится больше всего. Его удобно расширять и использовать, и для работы с ошибками в Scala есть удобные абстракции. Решение с валидацией мало будет отличаться от создания нового типа без валидации. Так же будет вспомогательный трейт, только он будет содержать еще и шаг валидации, а при создании будет возвращаться не сам тип, а `Either`. В качестве ошибки, мне нравится использовать `NonEmptyList` из библиотеки Cats, содержащий строки с описанием ошибок. Это довольно универсальный вариант, но можно выбрать то, что подходит вам лучше.
+
+Базовый трейт может выглядеть следующим образом:
+
+```scala
+trait ValidatedNewType[Raw]:
+  /** Validation checks whether type can be constructed or not. It returns None
+    * if it can be otherwise returns text description of error.
+    */
+  type Validation = Raw => Option[String]
+
+  opaque type Type = Raw
+
+  private[util] def make(v: Raw): Type = v
+
+  private type ErrorOr[A] = ValidatedNel[String, A]
+
+  def apply(v: Raw): Either[NonEmptyList[String], Type] =
+    validations.traverse(f => f(v)).map(_ => make(v)).toEither
+
+  def maybe(v: Raw): Option[Type] = apply(v).toOption
+
+  protected def addValidations(vs: Validation*): Unit =
+    validations ++= vs.map { f => (v: Raw) =>
+      f(v) match
+        case None      => ().validNel
+        case Some(err) => err.invalidNel
+    }
+
+  private var validations: Vector[Raw => ErrorOr[Unit]] =
+    Vector.empty
+
+  extension (t: Type)
+    protected def toRaw(): Raw = t
+
+end ValidatedNewType
+```
+
+Трейт добавит публичные методы `apply` и `maybe` для создания инстанса типа с проверкой. Проверки добавляются в конструкторе объекта методом `addValidations`. Метод расширения toRaw, отмеченный как `protected`, позволяет в наследниках трейта получить доступ к базовому типу, что удобно для добавления различных методов расширения к новому типу.
+
+Использование трейта выглядит так:
+
+```scala
+trait Degree:
+  self: ValidatedNewType[Double] =>
+  extension (t: Type) def toRad(): Double = t.toRaw() * Math.PI / 180
+
+object Latitude extends ValidatedNewType[Double] with Degree {
+  addValidations(
+    v => if v < -85 then Some("latitude must be greater than -85") else None,
+    v => if v > 85 then Some("latitude must be less than 85") else None
+  )
+}
+type Latitude = Latitude.Type
+
+object Longitude extends ValidatedNewType[Double] with Degree {
+  addValidations(
+    v => if v < -180 then Some("longitude must be greater than -180") else None,
+    v => if v > 180 then Some("longitude must be less than 180") else None
+  )
+}
+type Longitude = Longitude.Type
+```
+
+Здесь еще добавлен трейт `Degree`, который при подмешивании к объектам `Latitude` и `Longitude` добавляет к типам метод расширения `toRad`, возвращающий значение в радианах. Здесь это просто для демонстрации, а так, можно было сделать публичным метод `toRaw`.
+
+Добавим класс `Point`, который будем содержать два поля долготу и широту и функцию для вычисления расстояния между двумя точками:
+
+```scala
+case class Point(lat: Latitude, lon: Longitude)
+
+def NewPoint(lat: Double, lon: Double): Either[NonEmptyList[String], Point] =
+  (Latitude(lat).toValidated, Longitude(lon).toValidated)
+    .mapN(Point.apply)
+    .toEither
+
+val R = 6371e3
+
+def haversin(x: Double): Double =
+  (1 - Math.cos(x)) / 2
+
+def ahaversin(x: Double): Double =
+  Math.asin(Math.sqrt(x)) * 2
+
+def distance(p1: Point, p2: Point): Double =
+  val lat1 = p1.lat.toRad()
+  val lat2 = p2.lat.toRad()
+
+  val lon1 = p1.lon.toRad()
+  val lon2 = p2.lon.toRad()
+
+  val d = haversin(lat2 - lat1) + Math.cos(lat1) * Math.cos(lat2) * haversin(
+    lon2 - lon1
+  )
+
+  val c = ahaversin(d)
+
+  return c * R
+```
+
+И в итоге, расчет расстояния между двумя точками будет выглядеть так:
+
+```scala
+val d1 = for {
+  p1 <- NewPoint(40.123, -73.456)
+  p2 <- NewPoint(-30.456, 60.123)
+} yield distance(p1, p2) / 1000.0
+
+println(d1) // Right(15718.027575967817)
+
+val d2 = for {
+  p1 <- NewPoint(140.123, -273.456)
+  p2 <- NewPoint(-130.456, 260.123)
+} yield distance(p1, p2) / 1000.0
+
+println(d2) // Left(NonEmptyList(latitude must be less than 85, longitude must be greater than -180))
+```
 
 </spoiler>
 
@@ -284,13 +404,6 @@ int main() {
 В качестве примера, определим пакет `geo`:
 
 ```go
-package geo
-
-import (
-	"fmt"
-	"math"
-)
-
 type Metres float64
 type Kilometres float64
 
@@ -298,35 +411,39 @@ type latitude float64
 type longitude float64
 
 type point struct {
-	Lat latitude
-	Lon longitude
+    Lat latitude
+    Lon longitude
 }
 
-type Point *point
+type Point = *point
+
+func (p *point) String() string {
+    return fmt.Sprintf("%v, %v", p.Lat, p.Lon)
+}
 
 func (m Metres) ToKilometres() Kilometres {
-	return Kilometres(m / 1000)
+    return Kilometres(m / 1000)
 }
 
 func NewLat(v float64) (latitude, error) {
-	if v < -85 || v > 85 {
-		return 0, fmt.Errorf("latitude must be a value between -85 and 85, but got %v", v)
-	}
-	return latitude(v), nil
+    if v < -85 || v > 85 {
+        return 0, fmt.Errorf("latitude must be between -85 and 85, but got %v", v)
+    }
+    return latitude(v), nil
 }
 
 func NewLon(v float64) (longitude, error) {
-	if v < -180 || v > 180 {
-		return 0, fmt.Errorf("longitude must be a value between -180 and 180, but got %v", v)
-	}
-	return longitude(v), nil
+    if v < -180 || v > 180 {
+        return 0, fmt.Errorf("longitude must be between -180 and 180, but got %v", v)
+    }
+    return longitude(v), nil
 }
 
 func NewPoint(lat latitude, lon longitude) Point {
-	return &point{
-		Lat: lat,
-		Lon: lon,
-	}
+    return &point{
+        Lat: lat,
+        Lon: lon,
+    }
 }
 
 // Distance returns the shortes distance, in metres, between two geo points.
@@ -338,69 +455,77 @@ func Distance(p1, p2 point) Metres {
 И для примера, будем получать координаты от пользователя и считать дистанцию между точками.
 
 ```go
-package main
-
-import (
-	"example/geo"
-	"fmt"
-	"log"
-)
-
 func readPoint() (geo.Point, error) {
-	var (
-		rawLat float64
-		rawLon float64
-	)
+    var (
+        rawLat float64
+        rawLon float64
+    )
 
-	if _, err := fmt.Scanf("%f, %f", &rawLat, &rawLon); err != nil {
-		return nil, err
-	}
+    if _, err := fmt.Scanf("%f, %f", &rawLat, &rawLon); err != nil {
+        return nil, err
+    }
 
-	lat, err := geo.NewLat(rawLat)
-	if err != nil {
-		return nil, nil
-	}
+    errs := make([]error, 0, 2)
 
-	lon, err := geo.NewLon(rawLon)
-	if err != nil {
-		return nil, nil
-	}
+    lat, err := geo.NewLat(rawLat)
+    if err != nil {
+        errs = append(errs, err)
+    }
 
-	return geo.NewPoint(lat, lon), nil
+    lon, err := geo.NewLon(rawLon)
+    if err != nil {
+        errs = append(errs, err)
+    }
+
+    if len(errs) != 0 {
+        return nil, errors.Join(errs...)
+    }
+
+    return geo.NewPoint(lat, lon), nil
 }
 
 func main() {
-	fmt.Print("Input start point (lat, lon): ")
-	p1, err := readPoint()
-	if err != nil {
-		log.Fatalf("[E] reading the start point failed: %v", err)
-		return
-	}
+    fmt.Print("Input start point (lat, lon): ")
+    p1, err := readPoint()
+    if err != nil {
+        log.Fatalf("[E] reading the start point failed: %v", err)
+        return
+    }
 
-	fmt.Print("Input end point (lat, lon): ")
-	p2, err := readPoint()
-	if err != nil {
-		log.Fatalf("[E] reading the end point failed: %v", err)
-		return
-	}
+    fmt.Print("Input end point (lat, lon): ")
+    p2, err := readPoint()
+    if err != nil {
+        log.Fatalf("[E] reading the end point failed: %v", err)
+        return
+    }
 
-	d := geo.Distance(*p1, *p2)
+    d := geo.Distance(*p1, *p2)
 
-	fmt.Printf("Distance between points %v and %v is %.2f km\n", p1, p2, d.ToKilometres())
+    fmt.Printf("Distance between points %v and %v is %.2f km\n", p1, p2, d.ToKilometres())
 }
 ```
 
-Тут видны недостатки того, что типы `geo.latitude`, `geo.longitude` и `geo.point` не экспортируются из пакета `geo`. Из вне, нельзя объявить функцию, которая бы создавала объект типа `geo.point`. Чтобы иметь возможность ссылаться на объекты такого типа, и понадобился тип `geo.Point`.
+При таком подходе использовать типы `geo.latitude`, `geo.longitude` и `geo.point` вне пакета `geo` нельзя. В качестве обходного пути, можно задать экспортируемый псевдоним на указатель не экспортируемого типа, как сделано для `geo.point`. Псевдоним на указатель позволяет ссылаться на тип из внешнего кода, а так же использовать методы добавленные к типу `*geo.point`. Если бы тип `geo.Point` был бы задан как отдельный тип, а не псевдоним, то метод `String` был бы не доступен.
 
-Почему нельзя экспортировать непосредственно `geo.point`? В данном случае, можно, так как значение по умолчанию для типа `float64` (ноль) для `geo.latitude` и `geo.longitude` являются валидными. Но если бы это было не так, то оставалась бы возможность создать невалидный объект, чего хочется избежать.
+Почему нельзя экспортировать непосредственно `geo.point`? В данном случае, можно, так как значение по умолчанию для типа `float64` (ноль) для `geo.latitude` и `geo.longitude` являются валидными и созданный объект вызовом `geo.point{}` будет так же валидным. Но если бы это было не так, то можно было бы создать невалидный объект, чего хочется избежать.
 
-Пример исполнения программы:
+Если хочется из вне использовать типы `geo.latitude` и `geo.longitude`, то можно сделать аналогичные псевдонимы на указатели на них.
+
+Примеры исполнения программы:
 
 ```text
 Input start point (lat, lon): 40.123, -73.456
 Input end point (lat, lon): -30.456, 60.123
-Distance between points &{40.123 -73.456} and &{-30.456 60.123} is 15718.03 km
+Distance between points 40.123, -73.456 and -30.456, 60.123 is 15718.03 km
 ```
+
+```text
+Input start point (lat, lon): 140.123, 270.456
+[E] reading the start point failed: latitude must be between -85 and 85, but got 140.123
+longitude must be between -180 and 180, but got 270.456
+```
+
+Если оперировать указателями на такие объекты, то в качестве значения можно передать `nil`, но в целом проверка на `nil` может быть дешевле, чем проверка, что переданные объект отвечает нужным требованиям, к тому же, если не делать никаких проверок - переданный указатель на `nil` проще отловить это с большей вероятностью приведет к падению не же ли к испорченным данным, что заметить и исправить может оказаться или очень сложно, а то и просто не возможно.
 
 </spoiler>
 
