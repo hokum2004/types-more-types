@@ -39,16 +39,16 @@ trait Degree:
 
 object Latitude extends ValidatedNewType[Double] with Degree {
   addValidations(
-    v => if v < -85 then Some("latitude must be greater than -85") else None,
-    v => if v > 85 then Some("latitude must be less than 85") else None
+    v => if v <= -85 then Some("latitude must be greater than or equal to -85") else None,
+    v => if v >= 85 then Some("latitude must be less than or equal to 85") else None
   )
 }
 type Latitude = Latitude.Type
 
 object Longitude extends ValidatedNewType[Double] with Degree {
   addValidations(
-    v => if v < -85 then Some("longitude must be greater than -85") else None,
-    v => if v > 85 then Some("longitude must be less than 85") else None
+    v => if v <= -180 then Some("longitude must be greater than or equal to -180") else None,
+    v => if v >= 180 then Some("longitude must be less than or equal to 180") else None
   )
 }
 type Longitude = Longitude.Type

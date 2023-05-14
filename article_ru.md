@@ -324,16 +324,16 @@ trait Degree:
 
 object Latitude extends ValidatedNewType[Double] with Degree {
   addValidations(
-    v => if v < -85 then Some("latitude must be greater than -85") else None,
-    v => if v > 85 then Some("latitude must be less than 85") else None
+    v => if v <= -85 then Some("latitude must be greater than or equal to -85") else None,
+    v => if v >= 85 then Some("latitude must be less than or equal to 85") else None
   )
 }
 type Latitude = Latitude.Type
 
 object Longitude extends ValidatedNewType[Double] with Degree {
   addValidations(
-    v => if v < -180 then Some("longitude must be greater than -180") else None,
-    v => if v > 180 then Some("longitude must be less than 180") else None
+    v => if v <= -180 then Some("longitude must be greater than or equal to -180") else None,
+    v => if v >= 180 then Some("longitude must be less than or equal to 180") else None
   )
 }
 type Longitude = Longitude.Type
@@ -390,7 +390,7 @@ val d2 = for {
   p2 <- NewPoint(-130.456, 260.123)
 } yield distance(p1, p2) / 1000.0
 
-println(d2) // Left(NonEmptyList(latitude must be less than 85, longitude must be greater than -180))
+println(d2) // Left(NonEmptyList(latitude must be less than or equal to 85, longitude must be greater than or equal to -180))
 ```
 
 </spoiler>
@@ -426,14 +426,14 @@ func (m Metres) ToKilometres() Kilometres {
 }
 
 func NewLat(v float64) (latitude, error) {
-    if v < -85 || v > 85 {
+    if v <= -85 || v >= 85 {
         return 0, fmt.Errorf("latitude must be between -85 and 85, but got %v", v)
     }
     return latitude(v), nil
 }
 
 func NewLon(v float64) (longitude, error) {
-    if v < -180 || v > 180 {
+    if v <= -180 || v >= 180 {
         return 0, fmt.Errorf("longitude must be between -180 and 180, but got %v", v)
     }
     return longitude(v), nil

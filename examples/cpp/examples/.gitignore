@@ -1,0 +1,4 @@
+a.out
+.cache
+*.o
+compile_commands.json
