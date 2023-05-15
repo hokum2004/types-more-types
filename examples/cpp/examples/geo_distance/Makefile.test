@@ -1,0 +1,22 @@
+CXXFLAGS=-std=c++2b -Wall
+CXX=g++
+
+test_include_dirs=./vendor
+CXXFLAGS+=$(patsubst %, -I %, $(test_include_dirs))
+
+program=test.out
+
+objects=vendor/catch2/catch_amalgamated.o expected_mapn_test.o
+
+$(program): $(objects)
+	$(CXX) -o $@ $(CXXFLAGS) $(LDFLAGS) $^
+
+.PHONY: test clean
+
+test: $(program)
+	./$(program)
+
+clean:
+	rm -rf $(program) $(objects)
+
+expected_mapn_test.o: expected_mapn.hpp util.hpp

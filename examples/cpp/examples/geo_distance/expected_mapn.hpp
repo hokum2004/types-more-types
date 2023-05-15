@@ -52,6 +52,16 @@ std::expected<R, E> __tie_expected(S res, const std::expected<T, E> &v,
 }
 
 template <typename E, typename T, typename... Ts>
+std::expected<std::tuple<const T &>, E>
+tie_expected(const std::expected<T, E> &v) {
+  using R = std::tuple<const T &>;
+  if (!v) {
+    return std::unexpected(v.error());
+  }
+  return std::expected<R,E>(std::tuple<const T&>(v.value()));
+}
+
+template <typename E, typename T, typename... Ts>
 std::expected<std::tuple<const T &, const Ts &...>, E>
 tie_expected(const std::expected<T, E> &v, const std::expected<Ts, E> &...vs) {
   using R = std::tuple<const T &, const Ts &...>;
