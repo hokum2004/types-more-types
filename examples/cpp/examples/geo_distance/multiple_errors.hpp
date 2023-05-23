@@ -3,11 +3,14 @@
 
 #include <string>
 #include <vector>
+#include <ostream>
 
 struct MultipleErrors {
   std::string first;
   std::vector<std::string> rest;
 };
+
+std::ostream &operator<<(std::ostream &os, MultipleErrors const &errs);
 
 template <>
 struct Semigroup<MultipleErrors> {
@@ -26,4 +29,3 @@ struct Semigroup<MultipleErrors> {
 
   static const MultipleErrors zero;
 };
-

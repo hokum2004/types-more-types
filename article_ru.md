@@ -531,9 +531,10 @@ longitude must be between -180 and 180, but got 270.456
 
 <spoiler title="C++">
 
+Будем развивать идею заложенную в первой части. Так же заведем шаблонную структуру которая будет педставлять собой наш тип. Первое с чем надо определиться, так это как создавать её. Использование консруктора мне не нравится, так как в лучае передачи неправильных значений в конструктор, всё что можно сделать - это бросить исключение. Поэтому предлагаю пойти ины путем и добавить статический метод `New` который будет возвращать или созданое значение или ошибку.
+
 </spoiler>
 
 
 [1]: <https://docs.scala-lang.org/scala3/book/types-opaque-types.html> 'Scala: Opaque Types'
 [2]: <https://go.dev/ref/spec#TypeDef> 'Go: Type Definitions'
-[3]: <https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Instant.html> 'Java: Instant'

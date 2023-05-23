@@ -48,14 +48,6 @@ const std::vector<Validation<LongitudeTag::Type>> LongitudeTag::validations = {
 
 using Longitude = ValidatedNewType<LongitudeTag>;
 
-std::ostream &operator<<(std::ostream &os, MultipleErrors const &errs) {
-  os << errs.first;
-  for (auto const &err : errs.rest) {
-    os << "; " << err;
-  }
-  return os;
-}
-
 struct Point {
   Latitude lat;
   Longitude lon;
@@ -68,11 +60,6 @@ std::ostream &operator<<(std::ostream &os, const Point &v) {
 Point NewPoint(Latitude lat, Longitude lon) {
   return Point{lat, lon};
 }
-
-Point newPoint(Latitude lat, Longitude lon) { return Point{lat, lon}; };
-
-template <typename E, typename... Args>
-void qoo(std::expected<Args, E> const &...) {}
 
 int main() {
   auto lat1 = Latitude::New(60);
