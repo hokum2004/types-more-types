@@ -83,6 +83,8 @@ int main() {
   std::cout << "lon1: " << lon1 << "\n";
   std::cout << p1 << "\n";
 
+  std::cout << "\n";
+
   auto lat2 = Latitude::New(-89);
   auto lon2 = Longitude::New(-181);
   auto p2 = mapn(NewPoint, lat2, lon2);
