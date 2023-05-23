@@ -1,7 +1,7 @@
 #pragma once
 
 #ifdef __clang__
-#include "expected.hpp"
+#include "util/expected.hpp"
 #else
 #include <expected>
 #endif
@@ -10,13 +10,13 @@
 #include <functional>
 #include <iterator>
 #include <optional>
+#include <ostream>
 #include <string>
 #include <tuple>
 #include <type_traits>
 #include <vector>
-#include <ostream>
 
-#include "combiner.hpp"
+#include "util/semigroup.hpp"
 
 struct MultipleErrors {
   std::string first;
@@ -27,29 +27,29 @@ template <typename T>
 using Result = std::expected<T, MultipleErrors>;
 
 template <>
-struct Combiner<MultipleErrors> {
-  static MultipleErrors combine(const MultipleErrors &e1,
-                                const MultipleErrors &e2) {
+struct Semigroup<MultipleErrors> {
+  static MultipleErrors op(const MultipleErrors &e1, const MultipleErrors &e2) {
+    if (e1.first.empty())
+      return e2;
+    if (e2.first.empty())
+      return e1;
+
     std::vector<std::string> errs(e1.rest.begin(), e1.rest.end());
     errs.push_back(e2.first);
     std::copy(e2.rest.begin(), e2.rest.end(), std::back_inserter(errs));
+
     return MultipleErrors{e1.first, std::move(errs)};
   }
+
+  static const MultipleErrors zero;
 };
 
-template <typename T>
-concept ValidatedTagable = true;
-//    (not std::is_void_v<typename T::Type>) &&
-//    std::is_invocable_v<decltype(T::validations)::value_type> &&
-//    std::is_convertible_v<std::invoke_result_t<decltype(T::validations[0])>,
-//                          std::string>;
-//
+const MultipleErrors Semigroup<MultipleErrors>::zero{"", {}};
 
 template <typename T>
 using Validation = std::function<std::optional<std::string>(const T &)>;
 
 template <typename Tag>
-  requires ValidatedTagable<Tag>
 struct ValidatedNewType {
   friend Tag;
   using Type = ValidatedNewType<Tag>;
@@ -58,16 +58,16 @@ struct ValidatedNewType {
 
   static Result New(const Raw &);
 
-  friend std::ostream& operator<<(std::ostream &os, const Type& v) {
+  friend std::ostream &operator<<(std::ostream &os, const Type &v) {
     return os << v.value_;
   }
+
 private:
   explicit ValidatedNewType(const Raw &value) : value_(value) {}
   Raw value_;
 };
 
 template <typename Tag>
-  requires ValidatedTagable<Tag>
 typename ValidatedNewType<Tag>::Result
 ValidatedNewType<Tag>::New(typename ValidatedNewType<Tag>::Raw const &value) {
   std::vector<std::string> errs;

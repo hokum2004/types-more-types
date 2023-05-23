@@ -3,10 +3,12 @@ CXX=g++
 
 program=a.out
 
-$(program): main.o
+objects=main.o util/semigroup_string.o
+
+$(program): $(objects)
 	$(CXX) -o $@ $(CXXFLAGS) $(LDFLAGS) $^
 
-main.o: new_type.hpp util.hpp
+main.o: new_type.hpp util/ostream_printers.hpp
 
 .PHONY=clean fmt test
 
@@ -18,4 +20,4 @@ fmt:
 	clang-format -i *.cpp *.hpp
 
 test:
-	$(MAKE) -f Makefile.test test
+	$(MAKE) -C util -f Makefile.test test

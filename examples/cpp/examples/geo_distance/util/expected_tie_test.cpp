@@ -1,19 +1,12 @@
 #include <catch2/catch_amalgamated.hpp>
 
-#include "combiner.hpp"
-#include "expected.hpp"
-#include "expected_mapn.hpp"
-#include "util.hpp"
+#include "expected_tie.hpp"
+#include "semigroup_string.hpp"
+#include "ostream_printers.hpp"
 
 #include <ostream>
 #include <string>
 
-template <>
-struct Combiner<std::string> {
-  static std::string combine(const std::string &a, const std::string &b) {
-    return a + "; " + b;
-  }
-};
 namespace {
 
 struct Foo {
@@ -102,8 +95,7 @@ TEST_CASE("tie std::unexpected instances", "[tie]") {
   SECTION("two") {
     auto got = tie_expected(v1, v2);
     REQUIRE_FALSE(got);
-    REQUIRE(got.error() ==
-            Combiner<std::string>::combine(v1.error(), v2.error()));
+    REQUIRE(got.error() == Semigroup<std::string>::op(v1.error(), v2.error()));
   }
 
   SECTION("three") {
