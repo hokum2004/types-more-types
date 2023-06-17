@@ -531,10 +531,183 @@ longitude must be between -180 and 180, but got 270.456
 
 <spoiler title="C++">
 
-Будем развивать идею заложенную в первой части. Так же заведем шаблонную структуру которая будет педставлять собой наш тип. Первое с чем надо определиться, так это как создавать её. Использование консруктора мне не нравится, так как в лучае передачи неправильных значений в конструктор, всё что можно сделать - это бросить исключение. Поэтому предлагаю пойти ины путем и добавить статический метод `New` который будет возвращать или созданое значение или ошибку.
+Будем развивать идею, заложенную в первой части. Так же заведем шаблонную структуру которая будет представлять основу для новых типов. Первое с чем надо определиться, так это как создавать её. Использование конструктора мне не нравится, так как в случае передачи неправильных значений в конструктор, всё, что можно сделать — это бросить исключение. Поэтому предлагаю пойти иным путем и добавить статический метод `New`, который будет возвращать или созданное значение, или ошибку.
+
+Для того чтобы объединить возвращаемое значение и ошибку воспользуюсь типом `std::expected` из C++23. Компилятор g++ (у меня 12.2.0) уже содержит этот тип в составе стандартной библиотеке (с флагом `-std=C++2b`). Так как проверок может быть много и хочется вернуть результат всех проверок, то в качестве возвращаемой ошибки буду использовать такую структуру:
+
+```cpp
+struct MultipleErrors {
+  std::string first;
+  std::vector<std::string> rest;
+};
+```
+
+В итоге определение типа `ValidatedNewType`, которое будет служить базой для создания новых типов будет выглядеть так:
+
+```cpp
+template <typename T>
+using Result = std::expected<T, MultipleErrors>;
+
+template <typename T>
+using Validation = std::function<std::optional<std::string>(const T &)>;
+
+template <typename Tag>
+struct ValidatedNewType {
+  using Type = ValidatedNewType<Tag>;
+  using Raw = typename Tag::Type;
+  using Result = ::Result<Type>;
+
+  static Result New(const Raw &);
+
+  friend std::ostream &operator<<(std::ostream &os, const Type &v) {
+    return os << v.value_;
+  }
+
+private:
+  explicit ValidatedNewType(const Raw &value) : value_(value) {}
+  Raw value_;
+};
+
+template <typename Tag>
+typename ValidatedNewType<Tag>::Result
+ValidatedNewType<Tag>::New(typename ValidatedNewType<Tag>::Raw const &value) {
+  std::vector<std::string> errs;
+  for (Validation validation : Tag::validations) {
+    if (auto err = validation(value); err) {
+      errs.emplace_back(*err);
+    }
+  }
+
+  if (errs.empty()) {
+    return Result(Type(value));
+  }
+
+  return std::unexpected(
+      MultipleErrors{errs.front(), std::vector(++errs.begin(), errs.end())});
+}
+```
+
+Статический метод `New` ожидает, что тип `Tag` содержит статический набор проверок. Проверки — это функции с сигнатурой:
+
+```cpp
+std::optional<std::string> (const Tag::Type&);
+```
+
+Если проверка не удалась, то возвращается `std::optional` со строкой описывающий ошибку, в противном случае возвращается пустой `std::optional`.
+
+Для удобства, так же добавлен `operator <<` для вывода значений в консоль.
+
+Определим типы для долготы и широты, используя ValidatedNewType:
+
+```cpp
+struct LatitudeTag {
+  using Type = double;
+  static const std::vector<Validation<Type>> validations;
+};
+
+const std::vector<Validation<LatitudeTag::Type>> LatitudeTag::validations = {
+    [](double v) -> std::optional<std::string> {
+      return v <= -85 ? std::optional<std::string>(
+                            "longitude must be greater than or equal to -85")
+                      : std::optional<std::string>();
+    },
+    [](double v) -> std::optional<std::string> {
+      return v >= 85 ? std::optional<std::string>(
+                           "longitude must be less than or equal to 85")
+                     : std::optional<std::string>();
+    }};
+
+using Latitude = ValidatedNewType<LatitudeTag>;
+
+struct LongitudeTag {
+  using Type = double;
+  static const std::vector<Validation<Type>> validations;
+};
+
+const std::vector<Validation<LongitudeTag::Type>> LongitudeTag::validations = {
+    [](double v) -> std::optional<std::string> {
+      return v <= -180 ? std::optional<std::string>(
+                             "longitude must be greater than or equal to -180")
+                       : std::optional<std::string>();
+    },
+    [](double v) -> std::optional<std::string> {
+      return v >= 180 ? std::optional<std::string>(
+                            "longitude must be less than or equal to 180")
+                      : std::optional<std::string>();
+    }};
+
+using Longitude = ValidatedNewType<LongitudeTag>;
+```
+
+Испльзовать их можно так:
+
+```cpp
+struct Point {
+  Latitude lat;
+  Longitude lon;
+};
+
+std::ostream &operator<<(std::ostream &os, const Point &v) {
+  return os << "Point(" << v.lat << ", " << v.lon << ")";
+}
+
+Point NewPoint(Latitude lat, Longitude lon) {
+  return Point{lat, lon};
+}
+
+int main() {
+  auto lat1 = Latitude::New(60);
+  auto lon1 = Longitude::New(40);
+  auto p1 = mapn(NewPoint, lat1, lon1);
+
+  std::cout << "lat1: " << lat1 << "\n";
+  std::cout << "lon1: " << lon1 << "\n";
+  std::cout << p1 << "\n";
+
+  std::cout << "\n";
+
+  auto lat2 = Latitude::New(-89);
+  auto lon2 = Longitude::New(-181);
+  auto p2 = mapn(NewPoint, lat2, lon2);
+
+  std::cout << "lat2: " << lat2 << "\n";
+  std::cout << "lon2: " << lon2 << "\n";
+  std::cout << p2 << "\n";
+
+  return 0;
+}
+```
+
+Вывод программы будет таким:
+
+```text
+lat1: expected(60)
+lon1: expected(40)
+expected(Point(60, 40))
+
+lat2: unexpected(longitude must be greater than or equal to -85)
+lon2: unexpected(longitude must be greater than or equal to -180)
+unexpected(longitude must be greater than or equal to -85; longitude must be greater than or equal to -180)
+```
+
+Дополнительно был объявлен `operator <<` для типа `std::expected`, а также, для комбинации нескольких `std::expected`, добавлена функция `mapn`, упрощенно, её сигнатура:
+
+```cpp
+template <typename R, typename Error, typename T1, typename T2>
+std::expected<R, E> mapn(std::function<R(T1, T2)> &&f, std::expected<T1, E> const &v1, std::expected<T2, E> const & v2);
+```
+
+Она принимает функцию от аргументов которые "хранятся" в передаваемых `std::expected`. Если все переданные `std::expected` содержат значения, то они извлекаются и подставляются в переданную функцию. Результат оборачивается в `std::expected` и возвращается. Если хотя бы одно из переданных значений содержит ошибку, то возвращается ошибка. Полную реализацию можно найти в [репозитории][3].
 
 </spoiler>
 
+Когда использовать такой подход? Везде, где хочется. Есть ограничения на возможные значения, или простой тип имеет какое-то специальное смысловое значение в моделируемой области — это поводы задуматься о создании нового типа. При организации обмена данных можно встретить подходы с использованием XSD-схем или JSON-схем, для описания передаваемых данных. Часто, они содержат ограничения, и вот эти ограничения вполне можно выразить в типах. Да, это потребует некоторой дополнительной работы, но больший пласт делается единожды — определить базовый тип, добавить функции, который будут выполнять сериализацию/десериализацию основываясь на сериализации/десериалиазции нижележащих типов.
+
+Указанные варианты реализации можно расширить, чтобы не только проводить валидацию, но и выполнять какие-то манипуляции. Примером таких манипуляций может быть экранирование символов в строке, для подстановки её в SQL запрос, хотя сейчас, это и нужно довольно редко, так как есть готовые библиотеки для построения запросов, которые берут на себя это.
+
+Полный код примеров можно найти в [репозитории][4].
 
 [1]: <https://docs.scala-lang.org/scala3/book/types-opaque-types.html> 'Scala: Opaque Types'
 [2]: <https://go.dev/ref/spec#TypeDef> 'Go: Type Definitions'
+[3]: <https://github.com/hokum2004/types-more-types/blob/main/examples/cpp/examples/geo_distance/util/expected_mapn.hpp> 'Реализация `mapn` для `std::expected`'
+[4]: <https://github.com/hokum2004/types-more-types/tree/main/examples> 'Примеры'

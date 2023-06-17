@@ -26,10 +26,10 @@ using Validation = std::function<std::optional<std::string>(const T &)>;
 
 template <typename Tag>
 struct ValidatedNewType {
-  friend Tag;
+//  friend Tag;
   using Type = ValidatedNewType<Tag>;
   using Raw = typename Tag::Type;
-  using Result = std::expected<Type, MultipleErrors>;
+  using Result = ::Result<Type>;
 
   static Result New(const Raw &);
 
