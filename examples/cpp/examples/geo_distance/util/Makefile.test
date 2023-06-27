@@ -1,0 +1,28 @@
+CXXFLAGS=-std=c++2b -Wall
+CXX=g++
+
+test_include_dirs=../vendor
+CXXFLAGS+=$(patsubst %, -I %, $(test_include_dirs))
+
+program=test.out
+
+objects=../vendor/catch2/catch_amalgamated.o
+objects+=expected_mapn_test.o expected_tie_test.o combiner_test.o semigroup_test.o
+objects+=semigroup_string.o
+
+$(program): $(objects)
+	$(CXX) -o $@ $(CXXFLAGS) $(LDFLAGS) $^
+
+.PHONY: test clean
+
+test: $(program)
+	./$(program)
+
+clean:
+	rm -rf $(program) $(objects)
+
+expected_mapn_test.o: expected_mapn.hpp ostream_printers.hpp
+expected_tie_test.o: expected_tie.hpp ostream_printers.hpp
+combiner_test.o: combiner.hpp
+semigroup_string.o: semigroup.hpp semigroup_string.hpp
+semigroup_test.o: semigroup.hpp semigroup_string.hpp
